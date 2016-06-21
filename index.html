@@ -29,54 +29,11 @@
 					<span class="label label-important">Recording...</label>
 				</div>
 			</div>
-			<div class="row">
-				<div class="offset3 span6">
-                    <!-- <button class="btn blue-btn" ng-click="recordaswave('wav_btn');" ng-disabled="recording" id="wav_btn"> -->
-<!--                        <i class="icon-circle" ng-class="recordButtonStyle" id="wav_btn"></i>&nbsp; (Format: <i class="icon-circle green-btn"></i>&nbsp; = WAV <i class="icon-circle blue-btn"></i>&nbsp; = FLAC)
-                        <i class="icon-circle blue-btn" id="wav_btn"></i>&nbsp; (Format: <i class="icon-circle green-btn"></i>&nbsp; = WAV <i class="icon-circle blue-btn"></i>&nbsp; = FLAC) -->
-<!--                         FLAC
-                    </button><br>
- -->					
-					<h4>Download as</h4>
-					<input type="radio" name="format" ng-click="recordaswave(false);" value="flac" checked>FLAC-file
-					<input type="radio" name="format" ng-click="recordaswave(true);" value="wav">WAV-file<br>
-					
-					<br>
-					
-					<div ng-show="!wav_format">
-						<input type="checkbox" ng-disabled="isNotASRCapable" ng-model="isASREnabled" ng-click="setResultMode(isASREnabled);" />
-							<span ng-show="!isNotASRCapable">Send Audio to Speech Recognition (instead of File)</span>
-							<div ng-show="isNotASRCapable" class="inline">
-								<s>Send Audio to Speech Recognition (instead of File)</s><br>
-								<div class="alert alert-warning alert-dismissible">Disabled: Need API key for accessing Google Speech API (see comment in app.js)</div>
-							</div>
-						<br/>
-					</div>
-                </div>
-
-			</div>
-			<div class="row" >
-				<div class="text-center offset3 span6 form-group"  ng-show="!wav_format && result_mode == 'asr'">
-				
-					<h4>Recognition Result Data:</h4>
-					
-					<textarea name="asr-result" class="form-control span6" rows="10" ng-model="asr_result.text" readonly></textarea>
-                </div>
-
-			</div>
 		</div>
 <p>Press on the "Start recording button" to start the recording per microphone - permission by the user is required.<br>
 To end the recording press on "Stop recording".<br>
 The compression and input-sample-rate options are only applicable for FLAC file format download.<br>
 The input sample rate in Chrome is - as of now - 44100 Hz. If you change that, the recorded sample may be played slower or faster than expected.</p>
-<p>
-Important:<br>
-<br>
-If running the HTML page directly form the file system, then Chrome needs to be started with flag
-<code>--allow-file-access-from-files</code>.
-Otherwise the web worker cannot be loaded.<br>
-If you want to use the Google Speech Recognition web service, you may need to start Chrome with the flag
-<code>--disable-web-security</code>; <b>WARNING:</b> you should not browse the Internet when this flag is active.
-</p>
+
 	</body>
 </html>

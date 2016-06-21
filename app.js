@@ -19,35 +19,6 @@ recorderApp.controller('RecorderController', [ '$scope' , function($scope) {
     $scope.flacdata.bps = 16;
     $scope.flacdata.channels = 1;
     $scope.flacdata.compression = 5;
-    $scope.wav_format = false;
-    $scope.outfilename_flac = "output.flac";
-    $scope.outfilename_wav = "output.wav";
-    
-    $scope.result_mode = "file";//values: "asr" | "file" | TODO: "asr&file"
-    $scope.asr_result = {
-    		text: ""
-    };
-    
-    //your API key from Google Console for Web Speech Recognition service (secret!!!)
-    //  for more details on how to obtain an API key see e.g. 
-    //  http://codeabitwiser.com/2014/03/google-speech-recognition-api-information-guidelines/ 
-    $scope._google_api_key = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
-    $scope._asr_alternatives = 20;
-    
-    //do not changes these: this "detects" if a key for the Google Speech API is set or not
-    // (and updates page accordingly, i.e. enable/disable check-box for sending audio to ASR service):
-    var __def_key = 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx';
-    $scope.isNotASRCapable = $scope._google_api_key === __def_key;
-    
-	$scope.recordaswave = function(isUseWavFormat) {
-        $scope.wav_format = isUseWavFormat;
-    };
-    
-    $scope.setResultMode = function(isEnableASR){
-    	
-    	$scope.result_mode = isEnableASR? 'asr' : 'file';
-    	
-    };
       
 	$scope.startRecording = function(e) {
 		if ($scope.recording)
@@ -56,10 +27,7 @@ recorderApp.controller('RecorderController', [ '$scope' , function($scope) {
 		console.log('start recording');//DEBUG
 		
 		$scope.encoder = new Worker('encoder.js');
-        
-        if ($scope.wav_format == true){
-            $scope.encoder.postMessage({ cmd: 'save_as_wavfile'});
-        }
+
         
 		console.log('initializing encoder with:');//DEBUG
         console.log(' bits-per-sample = ' + $scope.flacdata.bps);//DEBUG
@@ -73,35 +41,16 @@ recorderApp.controller('RecorderController', [ '$scope' , function($scope) {
 			
 			if (e.data.cmd == 'end') {
 
-				var resultMode = $scope.result_mode;
-				
-				if(resultMode === 'file'){
-
-	                var fname = $scope.wav_format ? $scope.outfilename_wav : $scope.outfilename_flac;
-					$scope.forceDownload(e.data.buf, fname);
-					
-				}
-				else if(resultMode === 'asr'){
-					
-					if($scope.wav_format){
-						//can only use FLAC format (not WAVE)!
-						alert('Can only use FLAC format for speech recognition!');
-					}
-					else {
-						$scope.sendASRRequest(e.data.buf);
-					}
-					
-				}
-				else {
-					
-					console.error('Unknown mode for processing STOP RECORDING event: "'+resultMode+'"!');
-				}
-				
-				
+				console.log("Received END message");
 				$scope.encoder.terminate();
 				$scope.encoder = null;
 				
-			} else if (e.data.cmd == 'debug') {
+			}
+            else if(e.data.cmd == 'chunk'){
+                console.log("got chunk")
+                console.log(e.data)
+            }
+            else if (e.data.cmd == 'debug') {
 				
                 console.log(e.data);
                 
@@ -140,7 +89,6 @@ recorderApp.controller('RecorderController', [ '$scope' , function($scope) {
 		else {
 			console.error('JavaScript execution environment (Browser) does not support AudioContext interface.');
 			alert('Could not start recording audio:\n Web Audio is not supported by your browser!');
-			
 			return;
 		}
         $scope.audio_context = audio_context;
@@ -185,76 +133,10 @@ recorderApp.controller('RecorderController', [ '$scope' , function($scope) {
 		$scope.node.disconnect();
 		$scope.input = $scope.node = null;
 	};
-	
-	//create A-element for data BLOB and trigger download
-	$scope.forceDownload = function(blob, filename){
-		var url = (window.URL || window.webkitURL).createObjectURL(blob);
-		var link = window.document.createElement('a');
-		link.href = url;
-		link.download = filename || 'output.flac';
-		//NOTE: FireFox requires a MouseEvent (in Chrome a simple Event would do the trick)
-		var click = document.createEvent("MouseEvent");
-		click.initMouseEvent("click", true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
-		link.dispatchEvent(click);
-	};
+
 	
 	$scope.num = 0;
-	
-	$scope.sendASRRequest = function(blob){
-		
-		function ajaxSuccess () {
-			var result = this.responseText;
-            console.log("AJAXSubmit - Success!");//DEBUG
-            console.log(result);
-//            //note: you can get the serialized data through the "submittedData" custom property:
-//            console.log(JSON.stringify(this.submittedData));//DEBUG
-            
-            //QUICK-FIX: currently, several results are sent within one response, separated by a NEWLINE
-            //			-> convert into an array
-            if(/\r?\n/igm.test(result)){
-            	
-            	//convert NEWLINEs to commas:
-            	result = '[' + result.replace(/\r?\n/igm, ',');
 
-            	//remove "pending" comma, if present:
-            	result = result.replace(/,\s*$/igm, '');
-            	
-            	//close array:
-            	result += ']';
-			}
-            
-            try{
-            	result = JSON.parse(result);
-            	//format the result
-            	result = JSON.stringify(result, null, 2);
-            } catch (exc){
-            	console.warn('Could not parse result into JSON object: "'+result+'"');
-            }
-            
-            $scope.$apply(function(){
-            		$scope.asr_result.text = result;
-            });
-        }
-
-        var data = blob;
-        var sample_rate = 	$scope.samplerate;
-        var key = 			$scope._google_api_key;
-        var alternatives = 	$scope._asr_alternatives;
-        
-        var oAjaxReq = new XMLHttpRequest();
-        
-        oAjaxReq.onload = ajaxSuccess;
-        oAjaxReq.open("post", "https://www.google.com/speech-api/v2/recognize?client=chromium&lang=de-DE&maxAlternatives="+alternatives+"&output=json&key="+key, true);
-        oAjaxReq.setRequestHeader("Content-Type", "audio/x-flac; rate=" + sample_rate + ";");
-//        oAjaxReq.setRequestHeader("User-Agent", "Mozilla/5.0 (Windows NT 6.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1650.63 Safari/537.36;");
-		oAjaxReq.withCredentials = true;
-        oAjaxReq.send(data);
-        
-        $scope.$apply(function(){
-    		$scope.asr_result.text = "Waiting for Recognition Result...";
-        });
-        
-	};
 
 }]);
 
